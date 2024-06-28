@@ -1,0 +1,47 @@
+#!/usr/bin/env /home/ijukic/.venv/bin/python3
+
+#import json
+import pyperclip
+from onepassword import OnePassword
+from rofi import Rofi
+import subprocess as sp
+
+
+if __name__ == "__main__":
+    r = Rofi()
+    op  = OnePassword()
+    opitems = op.list_items()
+
+    opt = []
+    for item in opitems:
+        i_ainfo = item['additional_information'] if 'additional_information' in item else ""
+        opt.append(f"{item['id']} | {item['title']} | {i_ainfo} | {item['vault']['name']}")
+    index,key = r.select("1Passwd",options=opt,message="Select item")
+
+    if index:
+        it_id = opt[index].split("|")[0]
+        opitem = op.get_item(uuid=it_id)
+        opt = []
+        optk = {}
+        for fit in opitem['fields']:
+            if 'value' in fit:
+                if 'username' in fit['id']:
+                    opt.append(f"Username: {fit['value']}")
+                    opt.append("Copy Username")
+                    optk["Username"] = fit['value']
+                if 'password' in fit['id']:
+                    opt.append("Copy Password")
+                    optk["Password"] = fit['value']
+                if 'TOTP' in fit['id']:
+                    opt.append("Copy OTP")
+                    opt.append(f"OTP: {fit['totp']}")
+                    optk["OTP"] = fit['totp']
+
+        index,key = r.select(f"1Passwd - {opitem['title']}",options=opt)
+
+    if 'Copy' in opt[index]:
+        pyperclip.copy(optk[opt[index].split(' ')[1]])
+        import time
+        time.sleep(30)
+        cliph = f"/usr/bin/cliphist delete-query {optk[opt[index].split(' ')[1]]}".split()
+        p = sp.run(cliph, encoding='utf-8', stdout=sp.PIPE, stderr=sp.PIPE)
