@@ -1,16 +1,31 @@
 #!/usr/bin/env /home/ijukic/.venv/bin/python3
 
 #import json
+import os
 import pyperclip
+import subprocess as sp
+import logging
 from onepassword import OnePassword
 from rofi import Rofi
-import subprocess as sp
+
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s -  %(message)s',
+                    level=os.environ.get("LOGLEVEL", "ERROR"))
+logging.getLogger('rofi-op').setLevel(level=os.environ.get("LOGLEVEL", "ERROR"))
+logs = logging.getLogger('rofi-op')
 
 
 if __name__ == "__main__":
     r = Rofi()
-    op  = OnePassword()
-    opitems = op.list_items()
+    try:
+        op  = OnePassword()
+        opitems = op.list_items()
+    except Exception as e:
+        logs.error("Error: %s", e)
+        #connecting to desktop app: cannot connect to 1Password app, make sure it is running
+        r.error(message="connecting to desktop app: cannot connect to 1Password app, make sure it is running")
+        exit()
+
 
     opt = []
     for item in opitems:
@@ -44,4 +59,9 @@ if __name__ == "__main__":
         import time
         time.sleep(30)
         cliph = f"/usr/bin/cliphist delete-query {optk[opt[index].split(' ')[1]]}".split()
-        p = sp.run(cliph, encoding='utf-8', stdout=sp.PIPE, stderr=sp.PIPE)
+        try:
+            p = sp.run(cliph, encoding='utf-8', stdout=sp.PIPE, stderr=sp.PIPE)
+            logs.debug(p.stdout)
+            logs.error(p.stderr)
+        except Exception as e:
+            logs.error("Error: %s", e)
